@@ -41,7 +41,9 @@ function unconstrained_nls(solver; problem_set = unconstrained_nls_set(), atol =
       solver(nls)
     end
     ng0 = rtol != 0 ? norm(grad(nls, nls.meta.x0)) : 0
-    @test isapprox(stats.solution, ones(nls.meta.nvar), atol = atol + rtol * ng0)
+    primal, dual = kkt_checker(nls, stats.solution)
+    @test all(dual .< atol + rtol * ng0)
+    @test primal == [] || all(primal .< atol + rtol * ng0)
     @test stats.dual_feas < atol + rtol * ng0
     @test stats.status == :first_order
   end

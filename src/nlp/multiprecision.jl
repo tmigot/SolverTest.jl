@@ -12,7 +12,7 @@ The `problem_type` can be
 - :eqnbnd
 - :gen
 """
-function multiprecision_nlp(solver, ptype; precisions = (Float16, Float32, Float64, BigFloat))
+function multiprecision_nlp(solver, ptype; precisions = (Float16, Float32, Float64, BigFloat), atol = 1e-6, rtol = 1e-6)
   f(x) = (x[1] - 1)^2 + 4 * (x[2] - x[1]^2)^2
   c(x) = [x[1]^2 + x[2]^2]
   c2(x) = [c(x); x[2] - x[1]^2 / 10]
@@ -45,7 +45,9 @@ function multiprecision_nlp(solver, ptype; precisions = (Float16, Float32, Float
     @test stats.objective isa T
     @test stats.dual_feas isa T
     @test stats.primal_feas isa T
-    @test isapprox(stats.solution, ones(T, 2), atol = ϵ * ng0 * 10)
+    primal, dual = kkt_checker(nlp, stats.solution)
+    @test all(dual .< ϵ * ng0 + ϵ)
+    @test primal == [] || all(primal .< ϵ * ng0 + ϵ)
     @test stats.dual_feas < ϵ * ng0 + ϵ
   end
 end

@@ -61,8 +61,9 @@ function bound_constrained_nlp(
       solver(nlp)
     end
     ng0 = rtol != 0 ? norm(grad(nlp, nlp.meta.x0)) : 0
-    @test isapprox(stats.solution, ones(nlp.meta.nvar), atol = atol + rtol * ng0)
-    @test isapprox(stats.objective, 0.0, atol = atol + rtol * ng0)
+    primal, dual = kkt_checker(nlp, stats.solution)
+    @test all(dual .< atol + rtol * ng0)
+    @test primal == [] || all(primal .< atol + rtol * ng0)
     @test stats.dual_feas < atol + rtol * ng0
     @test stats.status == :first_order
   end
