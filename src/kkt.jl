@@ -1,4 +1,4 @@
-using LLSModels, SparseMatricesCOO, RipQP, NLPModelsModifiers, QuadraticModels, SparseArrays
+using LLSModels, RipQP, NLPModelsModifiers, QuadraticModels, SparseArrays
 
 """
     kkt_checker(nlp, sol)
@@ -44,7 +44,7 @@ function kkt_checker(
     uvar[Iλm .+ nμ] .= zero(T)
   end
 
-  A = sparse(vcat(1:nμ, cols), vcat(1:nμ, rows .+ nμ), vcat(1:nμ, vals), nμ, nμ + nλ) # SparseMatrixCOO(nμ, nμ + nλ, vcat(1:nμ, rows), vcat(1:nμ, cols .+ nμ), vcat(1:nμ, vals))
+  A = sparse(vcat(1:nμ, cols), vcat(1:nμ, rows .+ nμ), vcat(1:nμ, vals), nμ, nμ + nλ)
   b = grad(nlp, sol)
   kkt_nlp = LLSModel(A, b, lvar=lvar, uvar=uvar)
   FLLS = FeasibilityFormNLS(kkt_nlp)
