@@ -21,6 +21,7 @@ function kkt_checker(
   sol;
   bound_tol=sqrt(eps(T)),
   feas_tol=sqrt(eps(T)),
+  kwargs...,
 ) where {T, S}
   nμ = nlp.meta.nvar
   nλ = nlp.meta.ncon
@@ -47,10 +48,10 @@ function kkt_checker(
   A = sparse(vcat(1:nμ, cols), vcat(1:nμ, rows .+ nμ), vcat(1:nμ, vals), nμ, nμ + nλ)
   b = grad(nlp, sol)
   kkt_nlp = LLSModel(A, b, lvar=lvar, uvar=uvar)
-  FLLS = FeasibilityFormNLS(kkt_nlp)
-  qm = QuadraticModel(FLLS, FLLS.meta.x0)
-  stats = ripqp(qm)
-  @show qm.meta.nvar, length(stats.solution)
+  stats = ripqp(kkt_nlp, display = false, kwargs...)
+  if !(stats.status ∈ (:acceptable, :first_order))
+    @warn "Failure in the Lagrange multiplier computation, the status of ripqp is $(stats.status)."
+  end
   dual_res = residual(kkt_nlp, stats.solution)
   
   feas_res = max.(nlp.meta.lcon - cx, cx - nlp.meta.ucon, 0)
@@ -58,10 +59,11 @@ function kkt_checker(
   return feas_res, dual_res
 end
 
+# if setdiff(union(Iλfree, Iλfix, Iλp, Iλm), 1:nλ) != [] then `sol` doesn't satisfy the constraints
 function _split_indices(lvar, uvar, sol, tol)
-  Iμfree = findall(lvar .- tol .< sol .< uvar .+ tol)
+  Iμfree = findall(lvar .+ tol .< sol .< uvar .- tol)
   Iμfix = findall(isapprox.(lvar, sol, atol=tol) .&&  isapprox.(uvar, sol, atol=tol))
-  Iμp = findall(isapprox.(lvar, sol, atol=tol) .&& sol .< uvar .+ tol)
-  Iμm = findall(isapprox.(uvar, sol, atol=tol) .&& sol .< lvar .+ tol)
+  Iμp = findall(isapprox.(lvar, sol, atol=tol) .&& sol .< uvar .- tol)
+  Iμm = findall(isapprox.(uvar, sol, atol=tol) .&& sol .> lvar .+ tol)
   return Iμfree, Iμfix, Iμp, Iμm
 end
